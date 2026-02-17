@@ -13,15 +13,16 @@ export class UserService extends BaseService {
             body: JSON.stringify({ email, password }),
         });
 
-        const loginResult = new LoginResult(response.ok);
         if (response.ok) {
             const authResponse: AuthResponse = await response.json();
             setAccessToken(authResponse.accessToken);
             setRefreshToken(authResponse.refreshToken);
+            return new LoginResult(true, authResponse.roles);
         } else {
+            const loginResult = new LoginResult(false);
             loginResult.errorMessage = await response.text();
+            return loginResult;
         }
-        return loginResult;
     }
 
     public static async logout() {

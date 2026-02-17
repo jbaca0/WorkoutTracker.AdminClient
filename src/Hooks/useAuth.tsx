@@ -27,6 +27,11 @@ export const AuthProvider = function ({ children }: AuthProviderProps) {
     async function login(email: string, password: string) {
         const loginResult = await UserService.login(email, password);
         if (loginResult.success) {
+            if (!loginResult.roles.includes("Admin")) {
+                clearTokens();
+                setErrorMessage("Access denied. Admin role required.");
+                return;
+            }
             setUser({ email });
             navigate("/");
         }
