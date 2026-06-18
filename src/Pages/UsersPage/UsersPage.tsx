@@ -20,8 +20,10 @@ import {
   Typography,
   Paper,
   Box,
+  Tooltip,
 } from '@mui/material'
 import DeleteIcon from '@mui/icons-material/Delete'
+import RestartAltIcon from '@mui/icons-material/RestartAlt'
 import type UserSummary from '../../DataTransferObjects/Common/UserSummary'
 import { AdminService } from '../../Services/AdminService'
 
@@ -41,6 +43,10 @@ export default function UsersPage() {
   // Delete user state
   const [deletingUser, setDeletingUser] = useState<UserSummary | null>(null)
   const [deleteError, setDeleteError] = useState('')
+
+  // Reset user data state
+  const [resettingUser, setResettingUser] = useState<UserSummary | null>(null)
+  const [resetError, setResetError] = useState('')
 
   useEffect(() => {
     loadData()
@@ -114,6 +120,17 @@ export default function UsersPage() {
     }
   }
 
+  async function handleResetUserData() {
+    if (!resettingUser) return
+    setResetError('')
+    try {
+      await AdminService.resetUserData(resettingUser.id)
+      setResettingUser(null)
+    } catch (error: any) {
+      setResetError(error.message)
+    }
+  }
+
   return (
     <Container sx={{ mt: 4 }}>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
@@ -144,13 +161,24 @@ export default function UsersPage() {
                   <Button size="small" onClick={() => handleEditRoles(user)}>
                     Manage Roles
                   </Button>
-                  <IconButton
-                    size="small"
-                    color="error"
-                    onClick={() => { setDeleteError(''); setDeletingUser(user) }}
-                  >
-                    <DeleteIcon fontSize="small" />
-                  </IconButton>
+                  <Tooltip title="Reset User Data">
+                    <IconButton
+                      size="small"
+                      color="warning"
+                      onClick={() => { setResetError(''); setResettingUser(user) }}
+                    >
+                      <RestartAltIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Delete User">
+                    <IconButton
+                      size="small"
+                      color="error"
+                      onClick={() => { setDeleteError(''); setDeletingUser(user) }}
+                    >
+                      <DeleteIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
                 </TableCell>
               </TableRow>
             ))}
@@ -254,6 +282,28 @@ export default function UsersPage() {
           <Button onClick={() => setDeletingUser(null)}>Cancel</Button>
           <Button onClick={handleDeleteUser} variant="contained" color="error">
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+      {/* Reset User Data Confirmation Dialog */}
+      <Dialog open={resettingUser !== null} onClose={() => setResettingUser(null)}>
+        <DialogTitle>Reset User Data</DialogTitle>
+        <DialogContent>
+          <Typography>
+            Are you sure you want to reset all data for <strong>{resettingUser?.email}</strong>?
+            This will permanently delete all of their workouts, plans, and exercise history.
+            The account itself will not be deleted. This action cannot be undone.
+          </Typography>
+          {resetError && (
+            <Typography color="error" variant="body2" sx={{ mt: 1 }}>
+              {resetError}
+            </Typography>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setResettingUser(null)}>Cancel</Button>
+          <Button onClick={handleResetUserData} variant="contained" color="warning">
+            Reset Data
           </Button>
         </DialogActions>
       </Dialog>

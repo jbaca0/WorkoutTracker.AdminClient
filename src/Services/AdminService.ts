@@ -24,4 +24,8 @@ export class AdminService extends BaseService {
     public static async deleteUser(userId: string): Promise<void> {
         await this.fetchFromServer(`/admin/users/${userId}`, undefined, 'DELETE');
     }
+
+    public static async resetUserData(userId: string): Promise<void> {
+        await this.fetchFromServer(`/admin/users/${userId}/data`, undefined, 'DELETE');
+    }
 }
