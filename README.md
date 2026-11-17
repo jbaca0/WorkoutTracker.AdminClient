@@ -1,73 +1,70 @@
-# React + TypeScript + Vite
+# WorkoutTracker.AdminClient
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Internal admin console for WorkoutTracker — React 19, MUI 7, Vite, TypeScript. Web only, no
+mobile build. It talks to the same [WorkoutTracker.Server](https://github.com/jbaca0/WorkoutTracker.Server)
+API as the mobile app and sits entirely behind the server's `AdminOnly` policy, so a non-admin
+account cannot load anything here even with valid credentials.
 
-Currently, two official plugins are available:
+## Pages
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+| Page | What it does |
+| --- | --- |
+| `LoginPage` | Email/password login against `POST /auth/login` |
+| `UsersPage` | List users, create and delete accounts, assign and remove Identity roles |
+| `ExerciseInfosPage` | CRUD for the shared exercise catalog the clients read from |
+| `LogsPage` | Browse the request and application logs the server writes to the database |
+| `HomePage` | Landing page — dashboard not built yet |
 
-## React Compiler
+## Architecture
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+The same layering as the other clients, so moving between them costs nothing:
 
-## Expanding the ESLint configuration
+| Layer | Location | Responsibility |
+| --- | --- | --- |
+| Pages | `src/Pages/<Name>/` | Route components |
+| Components | `src/Components/` | `AppLayout` shell and `ProtectedRoute` guard |
+| Services | `src/Services/` | API access, each extending `BaseService` |
+| Domain | `src/Domain/` | Models with `FromData` / `ToData` conversions |
+| DTOs | `src/DataTransferObjects/{Common,Requests,Responses}/` | Wire contracts mirroring the server |
+| Hooks | `src/Hooks/` | `useAuth`, `useLocalStorage` |
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+`BaseService` attaches the access token, and on a `401` refreshes once against `POST /auth/refresh`
+and retries. `ProtectedRoute` keeps unauthenticated users on the login page.
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Running locally
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+The dev server runs over HTTPS on port 5174. The certificate files are gitignored, so generate
+them once with [mkcert](https://github.com/FiloSottile/mkcert):
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+mkcert localhost 127.0.0.1 ::1
 ```
+
+That writes `localhost+2.pem` and `localhost+2-key.pem` into the project root, which is where
+`vite.config.ts` expects them.
+
+### Configuration
+
+| Variable | Purpose |
+| --- | --- |
+| `VITE_SERVER_URL` | API base URL. **Required** — there is no fallback. |
+
+`.env` is tracked and points at the deployed server; `.env.development` points at
+`https://localhost:7083`. Machine-local overrides go in `.env.local`, which is gitignored.
+Never put a credential in `.env`.
+
+## Deployment
+
+Pushing to `main` builds and deploys to Azure Static Web Apps via
+`.github/workflows/azure-static-web-apps-victorious-smoke-09e74db1e.yml`. Pull requests get a
+preview environment, torn down when the PR closes.
+
+## Tests
+
+No front-end suite here yet. The admin endpoints this app consumes are covered by xUnit tests in
+`WorkoutTracker.Server` (`AdminHandlerTests`, `LogHandlerTests`).
