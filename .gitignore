@@ -23,3 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 *.pem
+
+# Local env overrides — never commit real credentials
+.env.local
+.env.*.local
